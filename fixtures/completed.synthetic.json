@@ -2,12 +2,89 @@
   "schema": "studylink.runtime-status.v1",
   "runId": "11111111-1111-4111-8111-111111111111",
   "lifecycle": "completed",
-  "timestamps": {"startedAt":"2026-09-03T00:00:00.000Z","updatedAt":"2026-09-03T00:00:08.000Z","heartbeatAt":"2026-09-03T00:00:08.000Z","terminalAt":"2026-09-03T00:00:08.000Z","staleAfterMs":120000},
-  "rail":"new-form","phase":"completed","target":{"label":"A1"},
-  "rounds":[{"round":1,"phase":"facts","selected":4,"persisted":4,"save":{"attempted":true,"outcome":"accepted"},"freshReadback":{"observed":true,"persisted":4},"timingMs":{"save":312,"total":604}}],
-  "invariants":{"baselinePreserved":true,"selectedOnlyOrNormalized":true,"overwrite":false,"freshReadbackRequired":true},
-  "ordinaryCompletion":{"answered":12,"denominator":20,"percentage":60},
-  "residualReasonCounts":{"no-profile-fact":8},
-  "terminal":{"terminal":true,"failClosed":false,"outcome":"completed","reason":"none"},
-  "provenance":{"cli":"studylink","command":"autonomous-save","packageVersion":"0.10.1","buildCommit":"90e4fa6e2fb55c59567c08f84fae2be4b8f16627"}
+  "timestamps": {
+    "startedAt": "2026-09-03T00:00:00.000Z",
+    "updatedAt": "2026-09-03T00:00:08.000Z",
+    "heartbeatAt": "2026-09-03T00:00:08.000Z",
+    "terminalAt": "2026-09-03T00:00:08.000Z",
+    "staleAfterMs": 120000
+  },
+  "rail": "new-form",
+  "phase": "completed",
+  "target": {
+    "label": "A1"
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "phase": "facts",
+      "selected": 4,
+      "persisted": 4,
+      "save": {
+        "attempted": true,
+        "outcome": "accepted"
+      },
+      "freshReadback": {
+        "observed": true,
+        "persisted": 4
+      },
+      "timingMs": {
+        "save": 312,
+        "total": 604
+      }
+    }
+  ],
+  "invariants": {
+    "baselinePreserved": true,
+    "selectedOnlyOrNormalized": true,
+    "overwrite": false,
+    "freshReadbackRequired": true
+  },
+  "ordinaryCompletion": {
+    "answered": 12,
+    "denominator": 20,
+    "percentage": 60
+  },
+  "residualReasonCounts": {
+    "no-profile-fact": 8
+  },
+  "terminal": {
+    "terminal": true,
+    "failClosed": false,
+    "outcome": "completed",
+    "reason": "none"
+  },
+  "provenance": {
+    "cli": "studylink",
+    "command": "autonomous-save",
+    "packageVersion": "0.10.1",
+    "buildCommit": "90e4fa6e2fb55c59567c08f84fae2be4b8f16627"
+  },
+  "verification": {
+    "auth": {
+      "status": "unknown",
+      "verifiedAt": null,
+      "source": "unavailable"
+    },
+    "profile": {
+      "status": "verified",
+      "verifiedAt": "2026-09-03T00:00:00.000Z",
+      "source": "cli-preflight"
+    }
+  },
+  "identity": {
+    "application": {
+      "status": "withheld"
+    },
+    "provider": {
+      "status": "withheld"
+    },
+    "course": {
+      "status": "withheld"
+    },
+    "form": {
+      "status": "available",
+      "kind": "new-form"
+    }
+  }
 }

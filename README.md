@@ -55,3 +55,12 @@ https://cdn.jsdelivr.net/gh/exisz/united-robotics-plugin-studylink@<FULL_40_CHAR
 ```
 
 World derives `plugin.js` and `rpc.mjs` from the same immutable directory.
+
+## Verification and identity scope
+
+The panel renders only bounded facts from the CLI contract. Profile preflight is
+`verified` with its preflight timestamp/source. Authentication is explicitly
+`unknown`/`unavailable` because the current runtime does not return a reusable
+auth-verification fact. Application, provider, and course identity are
+`withheld`; raw names and IDs are never accepted. The exact finite form rail and
+the optional tiny safe target label are the only displayed identity facts.
