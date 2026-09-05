@@ -1,16 +1,37 @@
-import assert from"node:assert/strict";import{mkdtemp,mkdir,writeFile,readFile,rm,symlink}from"node:fs/promises";import os from"node:os";import path from"node:path";import{spawn}from"node:child_process";import test from"node:test";
-const rpc=path.resolve("dist/rpc.mjs");async function root(t){const d=await mkdtemp(path.join(os.tmpdir(),"sl-plugin-"));t.after(()=>rm(d,{recursive:true,force:true}));return d}function invoke(dir,method,params){return new Promise((resolve,reject)=>{const c=spawn(process.execPath,[rpc],{env:{PATH:process.env.PATH??"",WORLD_PLUGIN_STATE_DIR:dir},stdio:["pipe","pipe","pipe"]});let out="",err="";c.stdout.on("data",x=>out+=x);c.stderr.on("data",x=>err+=x);c.on("error",reject);c.on("close",code=>resolve({code,err,envelope:JSON.parse(out)}));c.stdin.end(JSON.stringify({version:1,method,...(params===undefined?{}:{params})}))})}
-async function fixture(){return JSON.parse(await readFile("fixtures/completed.synthetic.json","utf8"))}
-test("missing controlled sink is idle and read-only",async t=>{const d=path.join(await root(t),"missing");const r=await invoke(d,"studylink.status.read");assert.equal(r.code,0);assert.deepEqual(r.envelope.result,{availability:"idle",snapshot:null,synthetic:false});await assert.rejects(readFile(path.join(d,"runtime-status.json")),{code:"ENOENT"})});
-test("reads, validates, and sanitizes only fixed sink",async t=>{const d=await root(t);await writeFile(path.join(d,"runtime-status.json"),JSON.stringify(await fixture()),{mode:0o600});const r=await invoke(d,"studylink.status.read");assert.equal(r.envelope.result.availability,"completed");assert.equal(r.envelope.result.snapshot.target.label,"A1");assert.equal(r.envelope.result.snapshot.rounds[0].freshReadback.persisted,4);assert.equal("runId"in r.envelope.result.snapshot,false);assert.equal(r.err,"")});
-test("rejects paths, unknown methods, malformed status and symlink sinks",async t=>{const d=await root(t);let r=await invoke(d,"studylink.status.read",{path:"/etc/passwd"});assert.equal(r.envelope.error.code,"invalid_request");r=await invoke(d,"filesystem.read",{path:"/etc/passwd"});assert.equal(r.envelope.error.code,"method_not_allowed");await writeFile(path.join(d,"runtime-status.json"),JSON.stringify({...await fixture(),token:"secret"}));r=await invoke(d,"studylink.status.read");assert.equal(r.envelope.error.code,"status_invalid");await rm(path.join(d,"runtime-status.json"));await symlink("/etc/passwd",path.join(d,"runtime-status.json"));r=await invoke(d,"studylink.status.read");assert.equal(r.envelope.error.code,"status_invalid")});
-test("synthetic demo is deterministic, bounded, and clearly marked",async t=>{const d=await root(t),a=await invoke(d,"studylink.demo.read",{tick:0}),b=await invoke(d,"studylink.demo.read",{tick:3});assert.equal(a.envelope.result.synthetic,true);assert.equal(a.envelope.result.availability,"running");assert.equal(b.envelope.result.availability,"completed");assert.equal(b.envelope.result.snapshot.rounds.length,1);const bad=await invoke(d,"studylink.demo.read",{tick:4});assert.equal(bad.envelope.error.code,"invalid_request")});
-test("rejects adversarial phase and contradictory semantic states",async t=>{const d=await root(t),base=await fixture();const variants=[
- {...base,phase:"student-secret-answer"},
- {...base,lifecycle:"completed",terminal:{terminal:false,failClosed:false,outcome:"running",reason:"none"},timestamps:{...base.timestamps,terminalAt:null}},
- {...base,lifecycle:"failed",phase:"failed",terminal:{terminal:true,failClosed:false,outcome:"failed",reason:"runtime-error"}},
- {...base,ordinaryCompletion:{answered:12,denominator:20,percentage:99}},
- {...base,rounds:[base.rounds[0],{...base.rounds[0]}]},
- {...base,rounds:[{...base.rounds[0],round:2},{...base.rounds[0],round:1}]},
-];for(const value of variants){await writeFile(path.join(d,"runtime-status.json"),JSON.stringify(value));const r=await invoke(d,"studylink.status.read");assert.equal(r.envelope.error.code,"status_invalid")}});
-test("rejects hostile verification and identity strings without echoing them",async t=>{const d=await root(t),base=await fixture();for(const value of [{...base,verification:{...base.verification,auth:{status:"verified",verifiedAt:base.timestamps.startedAt,source:"bearer-secret"}}},{...base,identity:{...base.identity,provider:{status:"University of Secret"}}}]){await writeFile(path.join(d,"runtime-status.json"),JSON.stringify(value));const r=await invoke(d,"studylink.status.read");assert.equal(r.envelope.error.code,"status_invalid");assert.equal(JSON.stringify(r.envelope).includes("Secret"),false)}});
+import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import test from "node:test";
+
+const backend = new URL("../dist/rpc.mjs", import.meta.url);
+
+function invoke(input) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [backend.pathname], { stdio: ["pipe", "pipe", "pipe"] });
+    const stdout = [];
+    const stderr = [];
+    child.stdout.on("data", (chunk) => stdout.push(chunk));
+    child.stderr.on("data", (chunk) => stderr.push(chunk));
+    child.once("error", reject);
+    child.once("close", (code) => resolve({
+      code,
+      stderr: Buffer.concat(stderr).toString("utf8"),
+      response: JSON.parse(Buffer.concat(stdout).toString("utf8")),
+    }));
+    child.stdin.end(typeof input === "string" ? input : JSON.stringify(input));
+  });
+}
+
+test("education.status reports the placeholder as pending", async () => {
+  const result = await invoke({ version: 1, method: "education.status" });
+  assert.equal(result.code, 0);
+  assert.equal(result.stderr, "");
+  assert.deepEqual(result.response, { version: 1, ok: true, result: { status: "pending" } });
+});
+
+test("unknown methods and malformed input return bounded protocol errors", async () => {
+  const unknown = await invoke({ version: 1, method: "system.exec" });
+  assert.deepEqual(unknown.response, { version: 1, ok: false, error: { code: "method_not_found" } });
+
+  const malformed = await invoke("not-json");
+  assert.deepEqual(malformed.response, { version: 1, ok: false, error: { code: "invalid_json" } });
+});

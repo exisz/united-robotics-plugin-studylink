@@ -1,4 +1,32 @@
-import assert from"node:assert/strict";import{readFile,readdir}from"node:fs/promises";import test from"node:test";
-test("dist is exactly immutable World V1 three-artifact contract",async()=>{assert.deepEqual((await readdir("dist")).sort(),["manifest.json","plugin.js","rpc.mjs"]);assert.deepEqual(JSON.parse(await readFile("dist/manifest.json","utf8")),{schemaVersion:1,id:"studylink",name:"StudyLink Runtime Status",publisher:"United Robotics"})});
-test("frontend is self-contained ESM with embedded dark theme CSS",async()=>{const s=await readFile("dist/plugin.js","utf8");assert.match(s,/export\{[^}]*mount/);assert.match(s,/CONTROLLED STATUS/);assert.match(s,/color-scheme:dark/);assert.match(s,/NO CONTROLLED STATUS/);assert.match(s,/STATUS UNAVAILABLE/);assert.doesNotMatch(s,/--paper:#f0eee5|background:#f5f2e8|background:#ece9dc/);assert.doesNotMatch(s,/from\s*["'](?:react|react-dom|\.\/)/);assert.doesNotMatch(s,/sourceMappingURL/)});
-test("RPC is standalone and only uses injected state directory",async()=>{const s=await readFile("dist/rpc.mjs","utf8");assert.doesNotMatch(s,/from\s*["'](?!node:)/);assert.doesNotMatch(s,/process\.env\.(?!WORLD_PLUGIN_STATE_DIR)/);assert.doesNotMatch(s,/checkpoint|evidence/i)});
+import assert from "node:assert/strict";
+import { readFile, readdir } from "node:fs/promises";
+import test from "node:test";
+
+const expectedManifest = {
+  schemaVersion: 1,
+  id: "education",
+  name: "Education",
+  publisher: "United Robotics",
+};
+
+test("dist contains exactly the World V1 three-file artifact contract", async () => {
+  assert.deepEqual((await readdir("dist")).sort(), ["manifest.json", "plugin.js", "rpc.mjs"]);
+  assert.deepEqual(JSON.parse(await readFile("dist/manifest.json", "utf8")), expectedManifest);
+});
+
+test("frontend is self-contained ESM and exports mount", async () => {
+  const source = await readFile("dist/plugin.js", "utf8");
+  assert.match(source, /export\{[^}]*mount/);
+  assert.match(source, /ur-education/);
+  assert.match(source, /Not built yet/);
+  assert.doesNotMatch(source, /from\s*["'](?:react|react-dom|\.\/)/);
+  assert.doesNotMatch(source, /sourceMappingURL/);
+});
+
+test("CSS is rooted in the Education namespace", async () => {
+  const css = await readFile("src/plugin.css", "utf8");
+  const classes = [...css.matchAll(/\.([A-Za-z_][A-Za-z0-9_-]*)/g)].map((match) => match[1]);
+  assert.ok(classes.length > 0);
+  assert.ok(classes.every((name) => name.startsWith("ur-education")));
+  assert.doesNotMatch(css, /(^|[},])\s*(?:html|body|:root|\.grid|\.state|\.progress)(?:\s|[,{.:#]|\[)/m);
+});

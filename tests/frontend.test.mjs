@@ -1,7 +1,50 @@
-import assert from"node:assert/strict";import test from"node:test";import{JSDOM}from"jsdom";
-function dom(){const d=new JSDOM("<!doctype html><div id=root></div>",{url:"https://world.test"});const old={};for(const k of["window","document","Element","HTMLElement","Node","navigator"]){old[k]=Object.getOwnPropertyDescriptor(globalThis,k);Object.defineProperty(globalThis,k,{configurable:true,writable:true,value:d.window[k]})}return()=>{d.window.close();for(const[k,v]of Object.entries(old))v?Object.defineProperty(globalThis,k,v):delete globalThis[k]}}
-const wait=async f=>{for(let i=0;i<500&&!f();i++)await new Promise(r=>setTimeout(r,5));assert.ok(f())};
-test("mount polls controlled status and renders verified fields and boundaries",async()=>{const restore=dom();try{const{mount}=await import(`../dist/plugin.js?${Date.now()}`),root=document.querySelector("#root"),calls=[];const snapshot={schema:"studylink.runtime-status.v1",lifecycle:"failed",timestamps:{updatedAt:"2026-09-03T00:00:08.000Z"},rail:"legacy",phase:"failed",target:{label:"A1"},verification:{auth:{status:"unknown",verifiedAt:null,source:"unavailable"},profile:{status:"verified",verifiedAt:"2026-09-03T00:00:00.000Z",source:"cli-preflight"}},identity:{application:{status:"withheld"},provider:{status:"withheld"},course:{status:"withheld"},form:{status:"available",kind:"legacy"}},rounds:[{round:1,phase:"facts",selected:2,persisted:1,save:{attempted:true,outcome:"validation"},freshReadback:{observed:true,persisted:1},timingMs:{save:20,total:40}}],invariants:{baselinePreserved:true,selectedOnlyOrNormalized:true,overwrite:false,freshReadbackRequired:true},ordinaryCompletion:{answered:9,denominator:20,percentage:45},residualReasonCounts:{"validation-no-persistence":1},terminal:{terminal:true,failClosed:true,outcome:"failed",reason:"runtime-error"},provenance:{cli:"studylink",command:"autonomous-save",packageVersion:"0.10.1",buildCommit:null}};const cleanup=mount(root,{invoke:async(...x)=>{calls.push(x);return{availability:"failed",snapshot,synthetic:false}}});await wait(()=>root.textContent.includes("45%"));assert.deepEqual(calls[0],["studylink.status.read"]);for(const text of["A1","legacy form / failed","Last verification","Profile verified","Authentication unknown","Provider withheld","Course withheld","Selected","Fresh readback","validation no persistence","Fail closed","Attachments, Next, Preview, Submit and finalize are unsupported"])assert.match(root.textContent,new RegExp(text,"i"));assert.equal(root.querySelectorAll("button").length,0);cleanup();assert.equal(root.childNodes.length,0)}finally{restore()}});
-test("synthetic demo uses bounded demo method and visible label",async()=>{const restore=dom();try{const{mount}=await import(`../dist/plugin.js?demo=${Date.now()}`),root=document.querySelector("#root"),calls=[];const cleanup=mount(root,{props:{syntheticDemo:true},invoke:async(...x)=>{calls.push(x);return{availability:"idle",snapshot:null,synthetic:true}}});await wait(()=>calls.length>0);assert.deepEqual(calls[0],["studylink.demo.read",{tick:0}]);assert.match(root.textContent,/DETERMINISTIC SYNTHETIC DEMO/);cleanup()}finally{restore()}});
-test("loading and idle are bounded dark-theme empty states",async()=>{const restore=dom();try{const{mount}=await import(`../dist/plugin.js?empty=${Date.now()}`),root=document.querySelector("#root");let resolve;const pending=new Promise(r=>resolve=r);const cleanup=mount(root,{invoke:()=>pending});await wait(()=>root.textContent.includes("CHECKING CONTROLLED STATUS"));assert.equal(root.querySelector(".sl-shell").dataset.state,"loading");assert.match(root.textContent,/Read only · local connector/);resolve({availability:"idle",snapshot:null,synthetic:false});await wait(()=>root.textContent.includes("NO CONTROLLED STATUS"));assert.equal(root.querySelector(".sl-shell").dataset.state,"idle");assert.match(root.textContent,/no customer data exposed/i);cleanup()}finally{restore()}});
-test("error state fails closed and recovers on the next bounded response",async()=>{const restore=dom();try{const{mount}=await import(`../dist/plugin.js?recovery=${Date.now()}`),root=document.querySelector("#root");let calls=0;const cleanup=mount(root,{invoke:async()=>{calls++;if(calls===1)throw new Error("Connector unavailable.");return{availability:"idle",snapshot:null,synthetic:false}}});await wait(()=>root.textContent.includes("STATUS UNAVAILABLE"));assert.equal(root.querySelector(".sl-shell").dataset.state,"failed");assert.match(root.textContent,/retrying automatically/i);await wait(()=>calls>1);await wait(()=>root.textContent.includes("NO CONTROLLED STATUS"));assert.equal(root.querySelector(".sl-shell").dataset.state,"idle");assert.equal(root.querySelector('[role="alert"]'),null);cleanup()}finally{restore()}});
+import assert from "node:assert/strict";
+import test from "node:test";
+import { JSDOM } from "jsdom";
+
+function installDom() {
+  const dom = new JSDOM("<!doctype html><div id=root></div>", { url: "https://world.test/" });
+  const previous = {};
+  for (const key of ["window", "document", "Element", "HTMLElement", "Node", "navigator"]) {
+    previous[key] = Object.getOwnPropertyDescriptor(globalThis, key);
+    Object.defineProperty(globalThis, key, { configurable: true, writable: true, value: dom.window[key] });
+  }
+  return () => {
+    dom.window.close();
+    for (const [key, descriptor] of Object.entries(previous)) {
+      if (descriptor === undefined) delete globalThis[key];
+      else Object.defineProperty(globalThis, key, descriptor);
+    }
+  };
+}
+
+test("mount renders the Education pending placeholder and never invokes the backend", async () => {
+  const restore = installDom();
+  try {
+    const { mount } = await import(`../dist/plugin.js?test=${Date.now()}`);
+    const root = document.querySelector("#root");
+    let calls = 0;
+    const cleanup = mount(root, { invoke: async () => { calls += 1; } });
+
+    assert.equal(typeof cleanup, "function");
+    assert.match(root.textContent, /Education/);
+    assert.match(root.textContent, /Not built yet/);
+    assert.match(root.textContent, /pending/i);
+    assert.equal(calls, 0);
+    assert.ok(root.querySelector("style")?.textContent.includes("ur-education"));
+
+    cleanup();
+    assert.equal(root.childNodes.length, 0);
+    cleanup();
+  } finally {
+    restore();
+  }
+});
+
+test("source contains no data request, polling, mock records, or state access", async () => {
+  const source = await import("node:fs/promises").then(({ readFile }) => readFile("src/plugin.jsx", "utf8"));
+  for (const forbidden of ["fetch(", "XMLHttpRequest", "WebSocket", "setTimeout", "setInterval", "useEffect", "projection.sqlite", "WORLD_PLUGIN_STATE_DIR", "syntheticDemo"]) {
+    assert.equal(source.includes(forbidden), false, forbidden);
+  }
+  assert.doesNotMatch(source, /invoke\s*\(/);
+});

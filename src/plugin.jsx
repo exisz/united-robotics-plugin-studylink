@@ -1,25 +1,42 @@
-import React,{useEffect,useRef,useState} from "react";
-import{createRoot}from"react-dom/client";
-import styles from"./plugin.css";
-const POLL_MS=1500;
-const words=s=>String(s??"—").replaceAll("-"," ");
-function valid(v){return v&&["idle","running","completed","failed","stale"].includes(v.availability)&&(v.snapshot===null||v.snapshot.schema==="studylink.runtime-status.v1")}
-function Bool({value}){return <span className={value?"ok":"no"}>{value?"VERIFIED":"NOT VERIFIED"}</span>}
-function Panel({invoke,props}){const demo=props?.syntheticDemo===true;const [data,setData]=useState(null),[error,setError]=useState("");const tick=useRef(0),active=useRef(true);
- useEffect(()=>{active.current=true;let timer;const poll=async()=>{try{const result=demo?await invoke("studylink.demo.read",{tick:Math.min(tick.current++,3)}):await invoke("studylink.status.read");if(!valid(result))throw new Error("Invalid bounded status response.");if(active.current){setData(result);setError("")}}catch(e){if(active.current)setError(e instanceof Error?e.message:"Status unavailable.")}finally{if(active.current)timer=setTimeout(poll,POLL_MS)}};poll();return()=>{active.current=false;clearTimeout(timer)}},[invoke,demo]);
- const s=data?.snapshot,state=error?"failed":!data?"loading":data.availability,completion=s?.ordinaryCompletion;
- return <section className="sl-shell" data-state={state} aria-label="StudyLink runtime status" aria-busy={!data&&!error}>
-  <style>{styles}</style><header><div><p>STUDYLINK / CONTROLLED STATUS</p><h2>APPLICATION RAIL</h2></div><div className={`state state-${state}`}><i/>{state.toUpperCase()}</div></header>
-  {demo&&<div className="demo" role="note">DETERMINISTIC SYNTHETIC DEMO · NOT CUSTOMER DATA</div>}
-  {error?<div className="empty fault" role="alert"><i aria-hidden="true"/><div><b>STATUS UNAVAILABLE</b><span>{error}</span><small>Fail closed · retrying automatically</small></div></div>:!s?<div className="empty" role="status"><i aria-hidden="true"/><div><b>{state==="loading"?"CHECKING CONTROLLED STATUS":"NO CONTROLLED STATUS"}</b><span>{state==="loading"?"Connecting to the local runtime-status reader.":"Start the CLI with its controlled runtime-status sink to see progress here."}</span><small>{state==="loading"?"Read only · local connector":"Idle · no customer data exposed"}</small></div></div>:<>
-   <div className="target"><span>PRIVACY-SAFE TARGET LABEL</span><strong>{s.target?.label??"WITHHELD"}</strong><small>{words(s.rail)} form / {words(s.phase)}</small></div>
-   <div className="facts"><section><h3>LAST VERIFICATION</h3><p>Profile <b>{words(s.verification.profile.status)}</b><small>{s.verification.profile.verifiedAt??"timestamp unavailable"} · {words(s.verification.profile.source)}</small></p><p>Authentication <b>{words(s.verification.auth.status)}</b><small>{s.verification.auth.verifiedAt??"timestamp unavailable"} · {words(s.verification.auth.source)}</small></p></section><section><h3>BOUNDED IDENTITY</h3><p>Application <b>{words(s.identity.application.status)}</b></p><p>Provider <b>{words(s.identity.provider.status)}</b></p><p>Course <b>{words(s.identity.course.status)}</b></p><p>Form <b>{words(s.identity.form.kind)}</b></p></section></div>
-   <div className="progress"><div style={{width:`${completion.percentage}%`}}/><strong>{completion.percentage}%</strong><span>{completion.answered} / {completion.denominator}</span><small>ORDINARY QUESTIONS ANSWERED</small></div>
-   <section className="rounds"><h3>SAVE ROUNDS</h3>{s.rounds.length?s.rounds.map(r=><article key={r.round}><b>R{String(r.round).padStart(2,"0")}</b><span>{words(r.phase)}</span><dl><dt>Selected</dt><dd>{r.selected}</dd><dt>Persisted</dt><dd>{r.persisted}</dd><dt>Save</dt><dd>{r.save.attempted?words(r.save.outcome):"not attempted"}</dd><dt>Fresh readback</dt><dd>{r.freshReadback.observed?`${r.freshReadback.persisted} observed`:"not observed"}</dd><dt>Timing</dt><dd>{r.timingMs.save} ms save · {r.timingMs.total??"—"} ms total</dd></dl></article>):<p className="none">No completed Save round reported.</p>}</section>
-   <div className="grid"><section><h3>SAFETY INVARIANTS</h3><p>Baseline preserved <Bool value={s.invariants.baselinePreserved}/></p><p>Selected only / normalized <Bool value={s.invariants.selectedOnlyOrNormalized}/></p><p>No overwrite <Bool value={s.invariants.overwrite===false}/></p><p>Fresh readback required <Bool value={s.invariants.freshReadbackRequired}/></p></section><section><h3>TERMINAL</h3><p>Outcome <b>{words(s.terminal.outcome)}</b></p><p>Fail closed <Bool value={s.terminal.failClosed}/></p><p>Reason <b>{words(s.terminal.reason)}</b></p></section></div>
-   <section className="residual"><h3>RESIDUAL TAXONOMY</h3>{Object.keys(s.residualReasonCounts).length?<ul>{Object.entries(s.residualReasonCounts).map(([k,v])=><li key={k}><span>{words(k)}</span><b>{v}</b></li>)}</ul>:<p className="none">No residual reasons reported.</p>}</section>
-   <section className="boundaries"><h3>MANUAL / PROTECTED BOUNDARIES</h3><p>Declarations and signatures require authorized human decisions. Attachments, Next, Preview, Submit and finalize are unsupported here and were not executed.</p></section>
-   <footer><span>{s.provenance.cli} {s.provenance.packageVersion} · {s.provenance.command}</span><span>{s.provenance.buildCommit??"build commit unavailable"}</span><span>Updated {s.timestamps.updatedAt}</span></footer>
-  </>}
- </section>}
-export function mount(root,{props={},invoke}={}){if(!(root instanceof Element))throw new TypeError("StudyLink requires an Element root.");if(typeof invoke!=="function")throw new TypeError("StudyLink requires an invoke function.");const rr=createRoot(root);rr.render(<Panel invoke={invoke} props={props}/>);return()=>rr.unmount()}
+import React from "react";
+import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
+import styles from "./plugin.css";
+
+function EducationPanel() {
+  return (
+    <section className="ur-education" aria-label="Education plugin">
+      <style>{styles}</style>
+      <header className="ur-education__rail">
+        <span><b>◆</b> WORLD / OFFICIAL PLUGIN</span>
+        <span className="ur-education__state"><i aria-hidden="true" /> PENDING</span>
+      </header>
+      <div className="ur-education__body">
+        <p className="ur-education__eyebrow">EDUCATION</p>
+        <h2>Education</h2>
+        <div className="ur-education__pending" role="status">
+          <span className="ur-education__mark" aria-hidden="true">—</span>
+          <div>
+            <strong>Not built yet</strong>
+            <p>Education is pending.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function mount(root, { invoke } = {}) {
+  if (!(root instanceof Element)) throw new TypeError("Education mount root must be an Element.");
+  if (typeof invoke !== "function") throw new TypeError("Education requires an invoke function.");
+
+  let active = true;
+  const reactRoot = createRoot(root);
+  flushSync(() => reactRoot.render(<EducationPanel />));
+
+  return () => {
+    if (!active) return;
+    active = false;
+    reactRoot.unmount();
+  };
+}
