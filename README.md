@@ -2,7 +2,7 @@
 
 The third official World example plugin, following the same lightweight React and one-shot backend contract as Hello World and Todo List.
 
-This first step is intentionally a placeholder. The panel displays **Education**, **Not built yet**, and **Pending**. It does not load education data or call its backend.
+This first step is intentionally a compact placeholder. The panel displays **Education**, **Not built yet**, and **Pending**, including in Capital's smallest persisted panel height. It does not load education data or call its backend.
 
 ## Artifact contract
 

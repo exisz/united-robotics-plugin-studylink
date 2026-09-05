@@ -7,20 +7,10 @@ function EducationPanel() {
   return (
     <section className="ur-education" aria-label="Education plugin">
       <style>{styles}</style>
-      <header className="ur-education__rail">
-        <span><b>◆</b> WORLD / OFFICIAL PLUGIN</span>
-        <span className="ur-education__state"><i aria-hidden="true" /> PENDING</span>
-      </header>
-      <div className="ur-education__body">
-        <p className="ur-education__eyebrow">EDUCATION</p>
-        <h2>Education</h2>
-        <div className="ur-education__pending" role="status">
-          <span className="ur-education__mark" aria-hidden="true">—</span>
-          <div>
-            <strong>Not built yet</strong>
-            <p>Education is pending.</p>
-          </div>
-        </div>
+      <div className="ur-education__placeholder" role="status">
+        <strong>Education</strong>
+        <span>Not built yet</span>
+        <b>Pending</b>
       </div>
     </section>
   );
