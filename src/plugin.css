@@ -67,11 +67,22 @@
 
 @container (max-width: 250px) {
   .ur-education .ur-education__placeholder {
-    gap: 6px;
-    padding-inline: 7px;
+    gap: 3px;
+    padding-inline: 4px;
+  }
+
+  .ur-education .ur-education__placeholder strong {
+    font-size: 8px;
   }
 
   .ur-education .ur-education__placeholder span {
-    display: none;
+    font-size: 6px;
+    letter-spacing: .03em;
+  }
+
+  .ur-education .ur-education__placeholder b {
+    padding: 2px 3px;
+    font-size: 6px;
+    letter-spacing: .03em;
   }
 }
